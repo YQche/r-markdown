@@ -1,12 +1,46 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { components } from '@/editor-components/index'
 import type { ComponentDef } from '@/editor-components/index'
 
-// 用于给每个组件配一个插入模板（覆盖自带的 example，更接地气）
-const INSERT_TEMPLATES: Record<string, string> = {
+// ── 分类（与 ComponentShowcase 完全一致）──
+const CATEGORIES = [
+  { key: 'all', label: '全部' },
+  { key: 'title', label: '标题' },
+  { key: 'content', label: '内容' },
+  { key: 'layout', label: '布局' },
+  { key: 'image', label: '图片' },
+  { key: 'interactive', label: '互动' },
+  { key: 'other', label: '其他' },
+]
+
+const CATEGORY_MAP: Record<string, string> = {
+  Title_DA01: 'title',
+  Title_DA02: 'title',
+  PTitle_DA01: 'title',
+  Breaking_DA01: 'title',
+  ReadingPath_DA01: 'content',
+  Lead_DA01: 'content',
+  Statement_DA01: 'content',
+  Steps_DA01: 'layout',
+  Steps_DA02: 'layout',
+  CaseFlow_DA01: 'layout',
+  Compare_DA01: 'layout',
+  Compare_DA02: 'layout',
+  Timeline_DA01: 'layout',
+  Slider_DA01: 'image',
+  Img_DA01: 'image',
+  CTA_DA01: 'interactive',
+  Engage_DA01: 'interactive',
+  Engage_DA02: 'interactive',
+  Badges_DA01: 'other',
+}
+
+// ── 插入模板 ──
+const TEMPLATES: Record<string, string> = {
   Badges_DA01: '<badges tone="accent">标签1|标签2|标签3</badges>',
-  Breaking_DA01: '<breaking badge="NEW" title="标题" subtitle="副标题" chips="标签1|标签2">\n正文内容段落\n</breaking>',
+  Breaking_DA01:
+    '<breaking badge="NEW" title="标题" subtitle="副标题" chips="标签1|标签2">\n正文内容段落\n</breaking>',
   CaseFlow_DA01:
     '<case-flow>\n- [案例 1] 标题|描述\n- [案例 2] 标题|描述\n</case-flow>',
   Compare_DA01:
@@ -45,10 +79,10 @@ interface Item {
   template: string
 }
 
-const items: Item[] = components.map((c: ComponentDef) => ({
+const allItems: Item[] = components.map((c: ComponentDef) => ({
   id: c.id,
   name: c.name,
-  template: INSERT_TEMPLATES[c.id] || c.example || `<${c.tag}>内容</${c.tag}>`,
+  template: TEMPLATES[c.id] || c.example || `<${c.tag}>内容</${c.tag}>`,
 }))
 
 const emit = defineEmits<{
@@ -56,10 +90,17 @@ const emit = defineEmits<{
 }>()
 
 const visible = ref(false)
+const activeCat = ref('all')
 const popoverClass = 'ci-popover'
+
+const filteredItems = computed(() => {
+  if (activeCat.value === 'all') return allItems
+  return allItems.filter((item) => CATEGORY_MAP[item.id] === activeCat.value)
+})
 
 function toggle() {
   visible.value = !visible.value
+  if (visible.value) activeCat.value = 'all'
 }
 
 function onItemClick(item: Item) {
@@ -90,21 +131,44 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
       </svg>
     </button>
 
-    <!-- 弹出面板 -->
     <div
       v-if="visible"
-      class="ci-panel absolute left-0 top-full mt-2 p-3 bg-white dark:bg-[#2a2a2e] rounded-xl z-50 w-72 max-h-80 overflow-y-auto"
+      class="ci-panel absolute left-0 top-full mt-2 p-3 bg-white dark:bg-[#2a2a2e] rounded-xl z-50 w-80"
       :style="{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }"
     >
-      <div class="grid grid-cols-3 gap-1.5">
+      <!-- 分类 tab -->
+      <div class="flex flex-wrap gap-1 mb-2.5">
         <button
-          v-for="item in items"
+          v-for="cat in CATEGORIES"
+          :key="cat.key"
+          class="px-2.5 py-1 rounded-md border-none text-[11px] font-medium cursor-pointer transition-colors duration-150"
+          :class="
+            activeCat === cat.key
+              ? 'bg-[var(--accent)] text-white'
+              : 'bg-transparent text-black/55 dark:text-white/55 hover:bg-black/8 dark:hover:bg-white/8'
+          "
+          @click="activeCat = cat.key"
+        >
+          {{ cat.label }}
+        </button>
+      </div>
+
+      <!-- 组件网格 -->
+      <div class="grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto">
+        <button
+          v-for="item in filteredItems"
           :key="item.id"
           class="text-left px-2.5 py-2 rounded-lg border-none bg-transparent cursor-pointer text-[12px] font-medium transition-colors duration-150 text-black/75 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
           @click="onItemClick(item)"
         >
           {{ item.name }}
         </button>
+        <div
+          v-if="filteredItems.length === 0"
+          class="col-span-3 text-center py-4 text-[12px] text-black/30 dark:text-white/30"
+        >
+          该分类暂无组件
+        </div>
       </div>
     </div>
   </div>
