@@ -12,6 +12,7 @@ import MobileActionsMenu from '../components/MobileActionsMenu.vue'
 import XhsExporter from '../components/XhsExporter.vue'
 import TagPropsForm from '../components/TagPropsForm.vue'
 import Toast from '../components/Toast.vue'
+import ComponentInserter from '../components/ComponentInserter.vue'
 
 // base64 图片数据存储，避免长字符串撑大编辑器
 const IMG_STORE_KEY = 'wechat-md-editor-imgs'
@@ -183,6 +184,10 @@ function showToast(msg: string) {
 
 function handleInsertImage() {
   imageInputRef.value?.click()
+}
+
+function handleInsertComponent(template: string) {
+  editorRef.value?.insertAtCursor(template)
 }
 
 function onImageSelected(e: Event) {
@@ -628,6 +633,7 @@ onBeforeUnmount(() => {
           </span>
           <span class="flex items-center gap-2">
             <button class="inline-flex items-center gap-1 px-2.5 rounded-[5px] bg-transparent text-[11px] font-medium cursor-pointer transition-all duration-150 whitespace-nowrap panel-action-btn" @click="handleInsertImage">插入图片</button>
+            <ComponentInserter @insert="handleInsertComponent" />
             <button
               v-if="tagInfo && !showTagDialog && !isMobile"
               class="inline-flex items-center gap-1 px-2.5 rounded-[5px] bg-transparent text-[11px] font-medium cursor-pointer transition-all duration-150 whitespace-nowrap panel-action-btn"
