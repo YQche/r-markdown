@@ -134,8 +134,32 @@ function onDragEnd() {
 const STORAGE_KEY = 'wechat-md-editor-content'
 const SAVE_TIME_KEY = 'wechat-md-editor-save-time'
 
+// 从 URL 读取外部传入的内容（供 skill / 外部工具直传 Markdown 用）。
+// 内容以 base64(UTF-8) 编码放在 hash 查询参数 c 上，如 #/editor?c=xxxx。
+// 读取后立即清掉该参数，避免刷新时反复覆盖用户的本地编辑。
+function readContentFromUrl(): string | null {
+  const hash = window.location.hash
+  const qIndex = hash.indexOf('?')
+  if (qIndex < 0) return null
+  const params = new URLSearchParams(hash.slice(qIndex + 1))
+  const c = params.get('c')
+  if (!c) return null
+  try {
+    const decoded = decodeURIComponent(escape(atob(c)))
+    // 消费后从地址栏移除 c 参数（保留路由路径）
+    params.delete('c')
+    const rest = params.toString()
+    const newHash = hash.slice(0, qIndex) + (rest ? '?' + rest : '')
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + newHash)
+    return decoded
+  } catch {
+    return null
+  }
+}
+
+const fromUrl = readContentFromUrl()
 const saved = localStorage.getItem(STORAGE_KEY)
-const markdown = ref(saved !== null ? saved : DEMO_CONTENT)
+const markdown = ref(fromUrl ?? (saved !== null ? saved : DEMO_CONTENT))
 const resolvedMarkdown = computed(() => resolveBase64(markdown.value))
 const previewRef = ref()
 const editorRef = ref<InstanceType<typeof Editor>>()
